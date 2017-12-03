@@ -1,37 +1,138 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-    <title>Website</title>
-    <meta charset="utf-8">
+<!DOCTYPE HTML>
+<html>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
-    <script type="text/javascript" src="script.js"></script>
-    <link rel="stylesheet" type="text/css" href="style.css">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- <link rel="stylesheet" type="text/css" media="screen and (max-device-width: 500px) and (orientation: portrait)" href="Styles/mobilePortrait.css" />
-    <link rel="stylesheet" type="text/css" media="screen and  (max-device-width: 1000px) and (orientation: landscape)" href="Styles/mobileLandscape.css" /> -->
-</head>
-
+	<head>
+	  <title>Mapa naukowców</title>
+	  
+	  <script src="vis-4.21.0/dist/vis.js"></script>
+	  <link href="vis-4.21.0/dist/vis.css" rel="stylesheet" type="text/css" />
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	  <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" />
+	  <link rel="stylesheet" type="text/css" href="style.css">
+	  
+	</head>
+	
 <body>
 
-  <div class="container-fluid">
-  
-	<button type="button" class="btn" id="button1">Pokaż mapę</button>
-    
-	  <div class="row">
-			
-		<div class="col-md-12 block" id="circles">
-            <div class="circle">
-                <p>Karol Draszawka</p>
-            </div>
-        </div>
-		
-	  </div>
-   
-  </div>
+	<div class="container-fluid">
 
+		<button type="button" class="btn" id="button1">Pokaż mapę</button>
+		<div id="mynetwork">
+			
+		</div>
+		
+	</div>
+
+	<script type="text/javascript">
+
+		var KD = "http://dblp.uni-trier.de/pers/xx/d/Draszawka:Karol.xml";
+		var KDCoop = "http://dblp.uni-trier.de/pers/xc/d/Draszawka:Karol.xml";
+		var arrayKD = new Array();
+		
+		let nodeFrom = 1;
+		let idNode = 2;
+		let idEdge = 1;
+		
+		// create an array with nodes
+		var nodes = new vis.DataSet();
+		// create an array with edges
+		var edges = new vis.DataSet();
+		
+		addNode(nodeFrom, "Karol Draszawka");
+		draw();
+		
+		function addNode(node, nameAuthor) {
+			try {
+				nodes.add({
+					id: node,
+					label: nameAuthor
+				});
+			}
+			catch (err) {
+				alert(err);
+			}
+		}
+		
+		function addEdge(idEdge, nodeFrom, nodeTo) {
+			try {
+				edges.add({
+					id: idEdge,
+					from: nodeFrom,
+					to: nodeTo
+				});
+			}
+			catch (err) {
+				alert(err);
+			}
+		}
+		
+		$("#button1").click(function() {		 
+			$.ajax({
+				type: "GET",
+				url: KD,
+				dataType: "xml",
+				success: xmlParser
+		   });  
+		});
+		
+		function xmlParser(xml) {
+
+			$(xml).find("co").each(function () {
+				var personWork = $(this).find("na").text();
+				console.log(personWork);
+			});
+			
+			$.ajax({
+				type: "GET",
+				url: KDCoop,
+				dataType: "xml",
+				success: parseWorkCooperate
+		   });
+		   
+		   console.log(arrayKD);  
+		}
+		
+		function parseWorkCooperate(xml) {
+		
+			$(xml).find("author").each(function () {
+				
+				var person = $(this).text();
+				var amountCommonDocuments = $(this).attr("count");
+				
+				//Add cooperate people with KD
+				arrayKD.push({
+					key: person,
+					value: amountCommonDocuments
+				});		
+			});
+			
+			for (var value in arrayKD) {
+				let val = arrayKD[value];
+				console.log(val.key + "=" +	val.value);
+				var addPerson = val.key + "=" +	val.value;
+				
+				addNode(idNode, val.key);
+
+				//idNode - destination node
+				addEdge(idEdge, nodeFrom, idNode);
+				
+				idNode++;
+				idEdge++;
+			}		
+		}
+		
+		 function draw() {
+			// create a network
+			 var container = document.getElementById('mynetwork');
+			 var data = {
+				nodes: nodes,
+				edges: edges
+			  };
+			 var options = {};
+			 var network = new vis.Network(container, data, options);
+		 }
+		 
+	</script>
 
 </body>
 </html>
