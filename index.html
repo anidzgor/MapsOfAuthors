@@ -24,9 +24,10 @@
 	</div>
 
 	<script type="text/javascript">
-
-		var KD = "http://dblp.uni-trier.de/pers/xx/d/Draszawka:Karol.xml";
-		var KDCoop = "http://dblp.uni-trier.de/pers/xc/d/Draszawka:Karol.xml";
+		var BASE_URL = "http://dblp.uni-trier.de/";
+		var PERSON_URL = "pers/xx/";
+		var COOP_URL = "pers/xc/";
+		var KD = "d/Draszawka:Karol.xml";
 		var arrayKD = new Array();
 		
 		let nodeFrom = 1;
@@ -69,7 +70,7 @@
 		$("#button1").click(function() {		 
 			$.ajax({
 				type: "GET",
-				url: KD,
+				url: BASE_URL + PERSON_URL + KD,
 				dataType: "xml",
 				success: xmlParser
 		   });  
@@ -84,7 +85,7 @@
 			
 			$.ajax({
 				type: "GET",
-				url: KDCoop,
+				url: BASE_URL + COOP_URL + KD,
 				dataType: "xml",
 				success: parseWorkCooperate
 		   });
