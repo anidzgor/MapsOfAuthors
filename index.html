@@ -29,6 +29,8 @@
 		var COOP_URL = "pers/xc/";
 		var KD = "d/Draszawka:Karol.xml";
 		var arrayKD = new Array();
+		var connections;
+		var authors = new Array();
 		
 		let nodeFrom = 1;
 		let idNode = 2;
@@ -39,7 +41,7 @@
 		// create an array with edges
 		var edges = new vis.DataSet();
 		
-		addNode(nodeFrom, "Karol Draszawka");
+		//addNode(nodeFrom, "Karol Draszawka");
 		draw();
 		
 		function addNode(node, nameAuthor) {
@@ -54,12 +56,13 @@
 			}
 		}
 		
-		function addEdge(idEdge, nodeFrom, nodeTo) {
+		function addEdge(idEdge, nodeFrom, nodeTo, edgeValue) {
 			try {
 				edges.add({
 					id: idEdge,
 					from: nodeFrom,
-					to: nodeTo
+					to: nodeTo,
+					value: edgeValue
 				});
 			}
 			catch (err) {
@@ -70,68 +73,100 @@
 		$("#button1").click(function() {		 
 			$.ajax({
 				type: "GET",
-				url: BASE_URL + PERSON_URL + KD,
-				dataType: "xml",
-				success: xmlParser
-		   });  
-		});
-		
-		function xmlParser(xml) {
-
-			$(xml).find("co").each(function () {
-				var personWork = $(this).find("na").text();
-				console.log(personWork);
-			});
-			
-			$.ajax({
-				type: "GET",
 				url: BASE_URL + COOP_URL + KD,
 				dataType: "xml",
-				success: parseWorkCooperate
-		   });
-		   
-		   console.log(arrayKD);  
-		}
-		
-		function parseWorkCooperate(xml) {
-		
-			$(xml).find("author").each(function () {
-				
-				var person = $(this).text();
-				var amountCommonDocuments = $(this).attr("count");
-				
-				//Add cooperate people with KD
-				arrayKD.push({
-					key: person,
-					value: amountCommonDocuments
-				});		
-			});
-			
-			for (var value in arrayKD) {
-				let val = arrayKD[value];
-				console.log(val.key + "=" +	val.value);
-				var addPerson = val.key + "=" +	val.value;
-				
-				addNode(idNode, val.key);
+				success: init
+		   });  
+		});
 
-				//idNode - destination node
-				addEdge(idEdge, nodeFrom, idNode);
+		function init(xml) {
+			authors.push({
+				name: "Karol Draszawka",
+				urlpt: "d/Draszawka:Karol"
+			});
+
+			var coauthors = $(xml).find("author");
+			for(i = 0; i < coauthors.length; i++) {
+				authors.push({
+					name: $(coauthors[i]).text(),
+					urlpt: $(coauthors[i]).attr("urlpt")
+				});
+			}
+
+			// adjacency list
+			connections = new Array(authors.length);
+			for(i = 0; i < authors.length; i++) {
+				connections[i] = new Array();
+			}
+
+			var results = [];
+			for(i = 0; i < authors.length; i++) {
+				(function(i) {
+					var asyncCall = $.ajax({
+						async: true,
+						type: "GET",
+						url: BASE_URL + COOP_URL + authors[i].urlpt,
+						dataType: "xml",
+						success: function(result) {
+							fillAdjacencyList(result, i)
+						}
+					}); 
+					results.push(asyncCall);
+				})(i);
+			}
+
+			$.when.apply(this, results).done(function() {
+				console.log("I should print after all");
+
 				
-				idNode++;
-				idEdge++;
-			}		
+				// adding nodes
+				for(i = 0; i < authors.length; i++) {
+					addNode(i, authors[i].name);
+				}
+
+				// adding edges
+				var edgeNum = 0;
+				for(i = 0; i < connections.length; i++) { // connections.length == authors.length
+					for(j = 0; j < connections[i].length; j++) {
+						if(connections[i][j].id > i) { // others are already covered
+							//for(k = 0; k < connections[i][j].count; k++) {
+								addEdge(edgeNum++, i, connections[i][j].id, connections[i][j].count);
+							//}
+						}
+					}
+				}
+			})
+			
 		}
-		
-		 function draw() {
-			// create a network
-			 var container = document.getElementById('mynetwork');
-			 var data = {
-				nodes: nodes,
-				edges: edges
-			  };
-			 var options = {};
-			 var network = new vis.Network(container, data, options);
-		 }
+
+		function fillAdjacencyList(xml, index) {
+			var coauthors = $(xml).find("author");
+			for(i = 0; i < coauthors.length; i++) {
+				authorName = $(coauthors[i]).text();
+				for(j = 0; j < authors.length; j++) {
+					if(authors[j].name == authorName) { // coauthor must exist on authors list (we don't want recurrence call)
+						//console.log($(coauthors[i]).attr("count")); // how many times co author worked with base author
+						connections[index].push({
+							id: j,
+							count: $(coauthors[i]).attr("count")
+						}) // connections[base id].push(co author id, count)
+						break;
+					}
+				}
+			}
+			//console.log("Adjacency filled for author");
+		}
+
+		function draw() {
+		// create a network
+			var container = document.getElementById('mynetwork');
+			var data = {
+			nodes: nodes,
+			edges: edges
+			};
+			var options = {};
+			var network = new vis.Network(container, data, options);
+		}
 		 
 	</script>
 
