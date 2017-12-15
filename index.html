@@ -17,7 +17,7 @@
 	<div class="container-fluid">
 
 		<button type="button" class="btn" id="button1">Pokaż mapę</button>
-		<div id="mynetwork">
+		<div id="mynetwork" style="height: 1200px; width: 1400px">
 			
 		</div>
 		
@@ -28,7 +28,6 @@
 		var PERSON_URL = "pers/xx/";
 		var COOP_URL = "pers/xc/";
 		var KD = "d/Draszawka:Karol.xml";
-		var arrayKD = new Array();
 		var connections;
 		var authors = new Array();
 		
@@ -41,7 +40,6 @@
 		// create an array with edges
 		var edges = new vis.DataSet();
 		
-		//addNode(nodeFrom, "Karol Draszawka");
 		draw();
 		
 		function addNode(node, nameAuthor) {
@@ -75,16 +73,21 @@
 				type: "GET",
 				url: BASE_URL + COOP_URL + KD,
 				dataType: "xml",
-				success: init
-		   });  
+				success: function(result) {
+					init();
+					fillNetwork(result);
+				}
+		   	});  
 		});
 
-		function init(xml) {
+		function init() {
 			authors.push({
 				name: "Karol Draszawka",
 				urlpt: "d/Draszawka:Karol"
 			});
+		}
 
+		function fillNetwork(xml) {	
 			var coauthors = $(xml).find("author");
 			for(i = 0; i < coauthors.length; i++) {
 				authors.push({
@@ -116,9 +119,6 @@
 			}
 
 			$.when.apply(this, results).done(function() {
-				console.log("I should print after all");
-
-				
 				// adding nodes
 				for(i = 0; i < authors.length; i++) {
 					addNode(i, authors[i].name);
@@ -129,9 +129,7 @@
 				for(i = 0; i < connections.length; i++) { // connections.length == authors.length
 					for(j = 0; j < connections[i].length; j++) {
 						if(connections[i][j].id > i) { // others are already covered
-							//for(k = 0; k < connections[i][j].count; k++) {
 								addEdge(edgeNum++, i, connections[i][j].id, connections[i][j].count);
-							//}
 						}
 					}
 				}
@@ -154,7 +152,6 @@
 					}
 				}
 			}
-			//console.log("Adjacency filled for author");
 		}
 
 		function draw() {
@@ -178,6 +175,28 @@
 				}
 			};
 			var network = new vis.Network(container, data, options);
+			network.on('click', function(properties) {
+				var ids = properties.nodes;
+				var clickedNode = nodes.get(ids);
+				var author = authors[clickedNode[0].id];
+				connections = null;
+				authors = new Array();
+				authors.push(author);
+				
+				nodes = new vis.DataSet();
+				edges = new vis.DataSet();
+				draw();
+				network.redraw();
+
+				$.ajax({
+				type: "GET",
+				url: BASE_URL + COOP_URL + author.urlpt,
+				dataType: "xml",
+				success: function(result) {
+							fillNetwork(result);
+						}
+		   		});  
+			});
 		}
 		 
 	</script>
